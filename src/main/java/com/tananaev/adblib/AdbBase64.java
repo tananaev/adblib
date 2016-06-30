@@ -1,4 +1,4 @@
-package com.cgutman.adblib;
+package com.tananaev.adblib;
 
 /**
  * This interface specifies the required functions for AdbCrypto to
