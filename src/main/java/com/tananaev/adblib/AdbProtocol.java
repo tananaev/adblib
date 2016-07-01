@@ -144,12 +144,12 @@ public class AdbProtocol {
      */
     public static byte[] generateMessage(int cmd, int arg0, int arg1, byte[] payload) {
         /* struct message {
-         *         unsigned command;       // command identifier constant
-         *         unsigned arg0;          // first argument
-         *         unsigned arg1;          // second argument
-         *         unsigned data_length;   // length of payload (0 is allowed)
-         *         unsigned data_check;    // checksum of data payload
-         *         unsigned magic;         // command ^ 0xffffffff
+         *     unsigned command;       // command identifier constant
+         *     unsigned arg0;          // first argument
+         *     unsigned arg1;          // second argument
+         *     unsigned data_length;   // length of payload (0 is allowed)
+         *     unsigned data_check;    // checksum of data payload
+         *     unsigned magic;         // command ^ 0xffffffff
          * };
          */
 

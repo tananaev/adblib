@@ -130,38 +130,38 @@ public class AdbConnection implements Closeable {
                             continue;
 
                         switch (msg.command) {
-                        /* Stream-oriented commands */
+                            /* Stream-oriented commands */
                             case AdbProtocol.CMD_OKAY:
                             case AdbProtocol.CMD_WRTE:
                             case AdbProtocol.CMD_CLSE:
-                            /* We must ignore all packets when not connected */
+                                /* We must ignore all packets when not connected */
                                 if (!conn.connected)
                                     continue;
 
-                            /* Get the stream object corresponding to the packet */
+                                /* Get the stream object corresponding to the packet */
                                 AdbStream waitingStream = openStreams.get(msg.arg1);
                                 if (waitingStream == null)
                                     continue;
 
                                 synchronized (waitingStream) {
                                     if (msg.command == AdbProtocol.CMD_OKAY) {
-                                    /* We're ready for writes */
+                                        /* We're ready for writes */
                                         waitingStream.updateRemoteId(msg.arg0);
                                         waitingStream.readyForWrite();
 
-                                    /* Unwait an open/write */
+                                        /* Unwait an open/write */
                                         waitingStream.notify();
                                     } else if (msg.command == AdbProtocol.CMD_WRTE) {
-                                    /* Got some data from our partner */
+                                        /* Got some data from our partner */
                                         waitingStream.addPayload(msg.payload);
 
-                                    /* Tell it we're ready for more */
+                                        /* Tell it we're ready for more */
                                         waitingStream.sendReady();
                                     } else if (msg.command == AdbProtocol.CMD_CLSE) {
-                                    /* He doesn't like us anymore :-( */
+                                        /* He doesn't like us anymore :-( */
                                         conn.openStreams.remove(msg.arg1);
 
-                                    /* Notify readers and writers */
+                                        /* Notify readers and writers */
                                         waitingStream.notifyClose();
                                     }
                                 }
@@ -173,19 +173,19 @@ public class AdbConnection implements Closeable {
                                 byte[] packet;
 
                                 if (msg.arg0 == AdbProtocol.AUTH_TYPE_TOKEN) {
-                                /* This is an authentication challenge */
+                                    /* This is an authentication challenge */
                                     if (conn.sentSignature) {
-                                    /* We've already tried our signature, so send our public key */
+                                        /* We've already tried our signature, so send our public key */
                                         packet = AdbProtocol.generateAuth(AdbProtocol.AUTH_TYPE_RSA_PUBLIC,
                                                 conn.crypto.getAdbPublicKeyPayload());
                                     } else {
-                                    /* We'll sign the token */
+                                        /* We'll sign the token */
                                         packet = AdbProtocol.generateAuth(AdbProtocol.AUTH_TYPE_SIGNATURE,
                                                 conn.crypto.signAdbTokenPayload(msg.payload));
                                         conn.sentSignature = true;
                                     }
 
-                                /* Write the AUTH reply */
+                                    /* Write the AUTH reply */
                                     conn.outputStream.write(packet);
                                     conn.outputStream.flush();
                                 }
@@ -193,17 +193,17 @@ public class AdbConnection implements Closeable {
 
                             case AdbProtocol.CMD_CNXN:
                                 synchronized (conn) {
-                                /* We need to store the max data size */
+                                    /* We need to store the max data size */
                                     conn.maxData = msg.arg1;
 
-                                /* Mark us as connected and unwait anyone waiting on the connection */
+                                    /* Mark us as connected and unwait anyone waiting on the connection */
                                     conn.connected = true;
                                     conn.notifyAll();
                                 }
                                 break;
 
                             default:
-                            /* Unrecognized packet, just drop it */
+                                /* Unrecognized packet, just drop it */
                                 break;
                         }
                     } catch (Exception e) {
