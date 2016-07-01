@@ -7,7 +7,7 @@ import java.net.Socket;
 
 public class AdbConnectionTest {
 
-    @Test
+    //@Test
     public void testConnection() throws Exception {
 
         Socket socket = new Socket("192.168.1.15", 5555);
