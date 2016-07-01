@@ -2,6 +2,9 @@ apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'signing'
 
+group = 'com.tananaev'
+version = '1.0'
+
 repositories {
     jcenter()
 }
@@ -10,70 +13,68 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-// Publishing
+if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
 
-group = 'com.tananaev'
-archivesBaseName = 'adblib'
-version = '1.0'
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
+    }
 
-task javadocJar(type: Jar) {
-    classifier = 'javadoc'
-    from javadoc
-}
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
 
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
+    artifacts {
+        archives javadocJar, sourcesJar
+    }
 
-artifacts {
-    archives javadocJar, sourcesJar
-}
+    signing {
+        sign configurations.archives
+    }
 
-signing {
-    sign configurations.archives
-}
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: project.findProperty('ossrhUsername'), password: project.findProperty('ossrhPassword'))
+                }
 
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: project.findProperty('ossrhUsername'), password: project.findProperty('ossrhPassword'))
-            }
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: project.findProperty('ossrhUsername'), password: project.findProperty('ossrhPassword'))
+                }
 
-            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                authentication(userName: project.findProperty('ossrhUsername'), password: project.findProperty('ossrhPassword'))
-            }
-
-            pom.project {
-                name 'adblib'
-                packaging 'jar'
-                description 'A Java library implementation of the ADB (Android Debug Bridge) network protocol.'
-                url 'https://github.com/tananaev/adblib'
-
-                scm {
-                    connection 'scm:git:https://github.com/tananaev/adblib'
-                    developerConnection 'scm:git:git@github.com:tananaev/adblib.git'
+                pom.project {
+                    name 'adblib'
+                    packaging 'jar'
+                    description 'A Java library implementation of the ADB (Android Debug Bridge) network protocol.'
                     url 'https://github.com/tananaev/adblib'
-                }
 
-                licenses {
-                    license {
-                        name 'BSD 3-Clause License'
-                        url 'http://opensource.org/licenses/BSD-3-Clause'
+                    scm {
+                        connection 'scm:git:https://github.com/tananaev/adblib'
+                        developerConnection 'scm:git:git@github.com:tananaev/adblib.git'
+                        url 'https://github.com/tananaev/adblib'
                     }
-                }
 
-                developers {
-                    developer {
-                        id 'tananaev'
-                        name 'Anton Tananaev'
-                        email 'anton.tananaev@gmail.com'
+                    licenses {
+                        license {
+                            name 'BSD 3-Clause License'
+                            url 'http://opensource.org/licenses/BSD-3-Clause'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id 'tananaev'
+                            name 'Anton Tananaev'
+                            email 'anton.tananaev@gmail.com'
+                        }
                     }
                 }
             }
         }
     }
+
 }
