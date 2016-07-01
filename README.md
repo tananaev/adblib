@@ -1,8 +1,12 @@
 # ADB Library - adblib
 
+[![Build Status](https://travis-ci.org/tananaev/adblib.svg?branch=master)](https://travis-ci.org/tananaev/adblib)
+
 ## Overview
 
 A Java library implementation of the ADB (Android Debug Bridge) network protocol.
+
+This project is a fork of the [original library](https://github.com/cgutman/AdbLib) developed by Cameron Gutman.
 
 ## Usage
 
