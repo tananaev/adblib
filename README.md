@@ -12,14 +12,14 @@ This project is a fork of the [original library](https://github.com/cgutman/AdbL
 
 Include dependency via Gradle:
 ```groovy
-compile 'com.tananaev:adblib:1.1'
+compile 'com.tananaev:adblib:1.2'
 ```
 or Maven:
 ```xml
 <dependency>
   <groupId>com.tananaev</groupId>
   <artifactId>adblib</artifactId>
-  <version>1.1</version>
+  <version>1.2</version>
 </dependency>
 ```
 
