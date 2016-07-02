@@ -4,13 +4,52 @@
 
 ## Overview
 
-A Java library implementation of the ADB (Android Debug Bridge) network protocol.
+A Java library implementation of [the ADB (Android Debug Bridge) network protocol](https://android.googlesource.com/platform/system/core/+/master/adb/protocol.txt).
 
 This project is a fork of the [original library](https://github.com/cgutman/AdbLib) developed by Cameron Gutman.
 
 ## Usage
 
-Coming soon...
+Include dependency via Gradle:
+```groovy
+testCompile 'com.tananaev:adblib:1.1'
+```
+or Maven:
+```xml
+<dependency>
+  <groupId>com.tananaev</groupId>
+  <artifactId>adblib</artifactId>
+  <version>1.1</version>
+</dependency>
+```
+
+To be able to connect to the ADB daemon on Android phone, you need to enable it to listen to TCP connections. To do that, connect your phone via USB cable and run following adb command:
+```
+adb tcpip 5555
+```
+
+Before trying to connect using the library, disconnect USB cable. Some problems have problems handling TCP connection when they are connected via USB.
+
+Some more info about Android remote debugging can be found on the official[Android developer website](https://developer.android.com/studio/command-line/adb.html#wireless).
+
+Simple library usage example:
+```java
+Socket socket = new Socket("192.168.1.42", 5555); // put phone IP address here
+
+AdbCrypto crypto = AdbCrypto.generateAdbKeyPair(new AdbBase64() {
+    @Override
+    public String encodeToString(byte[] data) {
+        return DatatypeConverter.printBase64Binary(data);
+    }
+});
+
+AdbConnection connection = AdbConnection.create(socket, crypto);
+connection.connect();
+
+AdbStream stream = connection.open("shell:logcat");
+
+...
+```
 
 ## License
 
