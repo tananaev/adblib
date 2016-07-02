@@ -30,7 +30,7 @@ adb tcpip 5555
 
 Disconnect USB cable before trying to connect using the library. Some phones have problems handling TCP connection when they are connected via USB as well.
 
-More info about Android remote debugging can be found on the official[Android developer website](https://developer.android.com/studio/command-line/adb.html#wireless).
+More info about Android remote debugging can be found on the official [Android developer website](https://developer.android.com/studio/command-line/adb.html#wireless).
 
 Sample library usage example:
 ```java
