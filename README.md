@@ -28,11 +28,11 @@ To be able to connect to the ADB daemon on Android phone, you need to enable it 
 adb tcpip 5555
 ```
 
-Before trying to connect using the library, disconnect USB cable. Some problems have problems handling TCP connection when they are connected via USB.
+Disconnect USB cable before trying to connect using the library. Some phones have problems handling TCP connection when they are connected via USB as well.
 
-Some more info about Android remote debugging can be found on the official[Android developer website](https://developer.android.com/studio/command-line/adb.html#wireless).
+More info about Android remote debugging can be found on the official[Android developer website](https://developer.android.com/studio/command-line/adb.html#wireless).
 
-Simple library usage example:
+Sample library usage example:
 ```java
 Socket socket = new Socket("192.168.1.42", 5555); // put phone IP address here
 
