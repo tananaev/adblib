@@ -1,7 +1,5 @@
 # ADB Library - adblib
 
-[![Build Status](https://travis-ci.org/tananaev/adblib.svg?branch=master)](https://travis-ci.org/tananaev/adblib)
-
 ## Overview
 
 A Java library implementation of [the ADB (Android Debug Bridge) network protocol](https://android.googlesource.com/platform/system/core/+/master/adb/protocol.txt).
