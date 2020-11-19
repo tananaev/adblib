@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class represents an ADB connection.
@@ -252,34 +253,37 @@ public class AdbConnection implements Closeable {
         if (!connectAttempted)
             throw new IllegalStateException("connect() must be called first");
 
-        waitForConnection();
+        waitForConnection(0, TimeUnit.MILLISECONDS);
 
         return maxData;
     }
 
     /**
-     * Same as {@code connect(false)}
+     * Same as {@code connect(0, TimeUnit.MILLISECONDS, false)}
      *
      * @throws IOException          If the socket fails while connecting
      * @throws InterruptedException If we are unable to wait for the connection to finish
      */
     public void connect() throws IOException, InterruptedException {
-        connect(false);
+        connect(0, TimeUnit.MILLISECONDS, false);
     }
 
     /**
      * Connects to the remote device. This routine will block until the connection
-     * completes.
+     * completes or the timeout elapses.
      *
+     * @param timeout the time to wait for the lock, or {@code 0} to wait indefinitely
+     * @param unit the time unit of the timeout argument
      * @param throwOnUnauthorised Whether to throw an {@link AdbAuthenticationFailedException}
      *                            if the peer rejects out first authentication attempt
+     * @return {@code true} if the connection was established, or {@code false} if the connection timed out
      * @throws IOException          If the socket fails while connecting
      * @throws InterruptedException If we are unable to wait for the connection to finish
      * @throws AdbAuthenticationFailedException If {@code throwOnUnauthorised} is {@code true}
      * and the peer rejects the first authentication attempt, which indicates that the peer has
      * not saved our public key from a previous connection
      */
-    public void connect(boolean throwOnUnauthorised) throws IOException, InterruptedException, AdbAuthenticationFailedException {
+    public boolean connect(long timeout, TimeUnit unit, boolean throwOnUnauthorised) throws IOException, InterruptedException, AdbAuthenticationFailedException {
         if (connected)
             throw new IllegalStateException("Already connected");
 
@@ -293,7 +297,7 @@ public class AdbConnection implements Closeable {
         authorisationFailed = false;
         connectionThread.start();
 
-        waitForConnection();
+        return waitForConnection(timeout, unit);
     }
 
     /**
@@ -312,7 +316,7 @@ public class AdbConnection implements Closeable {
         if (!connectAttempted)
             throw new IllegalStateException("connect() must be called first");
 
-        waitForConnection();
+        waitForConnection(0, TimeUnit.MILLISECONDS);
 
         /* Add this stream to this list of half-open streams */
         AdbStream stream = new AdbStream(this, localId);
@@ -335,19 +339,23 @@ public class AdbConnection implements Closeable {
         return stream;
     }
 
-    private void waitForConnection() throws InterruptedException, IOException {
+    private boolean waitForConnection(long timeout, TimeUnit unit) throws InterruptedException, IOException {
         synchronized (this) {
             /* Block if a connection is pending, but not yet complete */
             if (!connected)
-                wait();
+                wait(unit.toMillis(timeout));
 
             if (!connected) {
-                if (authorisationFailed)
+                if (connectAttempted)
+                    return false;
+                else if (authorisationFailed)
                     throw new AdbAuthenticationFailedException();
                 else
                     throw new IOException("Connection failed");
             }
         }
+
+        return true;
     }
 
     /**
