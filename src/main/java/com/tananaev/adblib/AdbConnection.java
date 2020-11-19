@@ -258,14 +258,14 @@ public class AdbConnection implements Closeable {
      * @throws InterruptedException If we are unable to wait for the connection to finish
      */
     public void connect() throws IOException, InterruptedException {
-        connect(0, TimeUnit.MILLISECONDS);
+        connect(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
 
     /**
      * Connects to the remote device. This routine will block until the connection
      * completes or the timeout elapses.
      *
-     * @param timeout the time to wait for the lock, or {@code 0} to wait indefinitely
+     * @param timeout the time to wait for the lock
      * @param unit the time unit of the timeout argument
      * @return {@code true} if the connection was established, or {@code false} if the connection timed out
      * @throws IOException          If the socket fails while connecting
@@ -286,17 +286,16 @@ public class AdbConnection implements Closeable {
         /* Wait for the connection to go live */
         synchronized (this) {
             long timeoutDurationMillis = unit.toMillis(timeout);
-            boolean hasTimeout = timeoutDurationMillis != 0;
             long timeoutEndMillis = System.currentTimeMillis() + timeoutDurationMillis;
             long remainingTimeoutMillis = timeoutDurationMillis;
 
-            while (!connected && connectAttempted && (!hasTimeout || remainingTimeoutMillis > 0)) {
+            while (!connected && connectAttempted && remainingTimeoutMillis > 0) {
                 wait(remainingTimeoutMillis);
                 remainingTimeoutMillis = timeoutEndMillis - System.currentTimeMillis();
             }
 
             if (!connected)
-                if (hasTimeout && connectAttempted)
+                if (connectAttempted)
                     return false;
                 else
                     throw new IOException("Connection failed");
