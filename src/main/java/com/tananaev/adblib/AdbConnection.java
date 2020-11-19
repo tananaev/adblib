@@ -239,7 +239,7 @@ public class AdbConnection implements Closeable {
 
         synchronized (this) {
             /* Block if a connection is pending, but not yet complete */
-            if (!connected)
+            while (!connected && connectAttempted)
                 wait();
 
             if (!connected) {
@@ -258,14 +258,14 @@ public class AdbConnection implements Closeable {
      * @throws InterruptedException If we are unable to wait for the connection to finish
      */
     public void connect() throws IOException, InterruptedException {
-        connect(0, TimeUnit.MILLISECONDS);
+        connect(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
     }
 
     /**
      * Connects to the remote device. This routine will block until the connection
      * completes or the timeout elapses.
      *
-     * @param timeout the time to wait for the lock, or {@code 0} to wait indefinitely
+     * @param timeout the time to wait for the lock
      * @param unit the time unit of the timeout argument
      * @return {@code true} if the connection was established, or {@code false} if the connection timed out
      * @throws IOException          If the socket fails while connecting
@@ -285,8 +285,10 @@ public class AdbConnection implements Closeable {
 
         /* Wait for the connection to go live */
         synchronized (this) {
-            if (!connected)
-                wait(unit.toMillis(timeout));
+            long timeoutEndMillis = System.currentTimeMillis() + unit.toMillis(timeout);
+            while (!connected && connectAttempted && timeoutEndMillis - System.currentTimeMillis() > 0) {
+                wait(timeoutEndMillis - System.currentTimeMillis());
+            }
 
             if (!connected)
                 if (connectAttempted)
@@ -316,7 +318,7 @@ public class AdbConnection implements Closeable {
 
         /* Wait for the connect response */
         synchronized (this) {
-            if (!connected)
+            while (!connected && connectAttempted)
                 wait();
 
             if (!connected) {
