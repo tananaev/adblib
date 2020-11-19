@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class represents an ADB connection.
@@ -259,6 +260,20 @@ public class AdbConnection implements Closeable {
      * @throws InterruptedException If we are unable to wait for the connection to finish
      */
     public void connect() throws IOException, InterruptedException {
+        connect(0, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Connects to the remote device. This routine will block until the connection
+     * completes or the timeout elapses.
+     *
+     * @param timeout the time to wait for the lock, or {@code 0} to wait indefinitely
+     * @param unit the time unit of the timeout argument
+     * @return {@code true} if the connection was established, or {@code false} if the connection timed out
+     * @throws IOException          If the socket fails while connecting
+     * @throws InterruptedException If we are unable to wait for the connection to finish
+     */
+    public boolean connect(long timeout, TimeUnit unit) throws IOException, InterruptedException {
         if (connected)
             throw new IllegalStateException("Already connected");
 
@@ -275,12 +290,16 @@ public class AdbConnection implements Closeable {
         /* Wait for the connection to go live */
         synchronized (this) {
             if (!connected)
-                wait();
+                wait(unit.toMillis(timeout));
 
-            if (!connected) {
-                throw new IOException("Connection failed");
-            }
+            if (!connected)
+                if (connectAttempted)
+                    return false;
+                else
+                    throw new IOException("Connection failed");
         }
+
+        return true;
     }
 
     /**
