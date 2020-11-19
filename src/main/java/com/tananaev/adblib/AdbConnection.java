@@ -263,7 +263,7 @@ public class AdbConnection implements Closeable {
 
     /**
      * Connects to the remote device. This routine will block until the connection
-     * completes.
+     * completes or the timeout elapses.
      *
      * @param timeout the time to wait for the lock, or {@code 0} to wait indefinitely
      * @param unit the time unit of the timeout argument
