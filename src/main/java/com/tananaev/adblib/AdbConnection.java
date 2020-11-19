@@ -252,18 +252,7 @@ public class AdbConnection implements Closeable {
         if (!connectAttempted)
             throw new IllegalStateException("connect() must be called first");
 
-        synchronized (this) {
-            /* Block if a connection is pending, but not yet complete */
-            if (!connected)
-                wait();
-
-            if (!connected) {
-                if (authorisationFailed)
-                    throw new AdbAuthenticationFailedException();
-                else
-                    throw new IOException("Connection failed");
-            }
-        }
+        waitForConnection();
 
         return maxData;
     }
@@ -302,18 +291,7 @@ public class AdbConnection implements Closeable {
         authorisationFailed = false;
         connectionThread.start();
 
-        /* Wait for the connection to go live */
-        synchronized (this) {
-            if (!connected)
-                wait();
-
-            if (!connected) {
-                if (authorisationFailed)
-                    throw new AdbAuthenticationFailedException();
-                else
-                    throw new IOException("Connection failed");
-            }
-        }
+        waitForConnection();
     }
 
     /**
@@ -332,18 +310,7 @@ public class AdbConnection implements Closeable {
         if (!connectAttempted)
             throw new IllegalStateException("connect() must be called first");
 
-        /* Wait for the connect response */
-        synchronized (this) {
-            if (!connected)
-                wait();
-
-            if (!connected) {
-                if (authorisationFailed)
-                    throw new AdbAuthenticationFailedException();
-                else
-                    throw new IOException("Connection failed");
-            }
-        }
+        waitForConnection();
 
         /* Add this stream to this list of half-open streams */
         AdbStream stream = new AdbStream(this, localId);
@@ -364,6 +331,21 @@ public class AdbConnection implements Closeable {
 
         /* We're fully setup now */
         return stream;
+    }
+
+    private void waitForConnection() throws InterruptedException, IOException {
+        synchronized (this) {
+            /* Block if a connection is pending, but not yet complete */
+            if (!connected)
+                wait();
+
+            if (!connected) {
+                if (authorisationFailed)
+                    throw new AdbAuthenticationFailedException();
+                else
+                    throw new IOException("Connection failed");
+            }
+        }
     }
 
     /**
