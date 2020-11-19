@@ -258,8 +258,7 @@ public class AdbConnection implements Closeable {
     }
 
     /**
-     * Connects to the remote device. This routine will block until the connection
-     * completes.
+     * Same as {@code connect(false)}
      *
      * @throws IOException          If the socket fails while connecting
      * @throws InterruptedException If we are unable to wait for the connection to finish
@@ -269,15 +268,18 @@ public class AdbConnection implements Closeable {
     }
 
     /**
-     * Same as {@link #connect()}, but also throws {@link AdbAuthenticationFailedException} if the
-     * peer rejects the first authentication attempt, which indicates that the peer has not saved
-     * our public key from a previous connection
+     * Connects to the remote device. This routine will block until the connection
+     * completes.
+     *
+     * @param throwOnUnauthorised Whether to throw an {@link AdbAuthenticationFailedException}
+     *                            if the peer rejects out first authentication attempt
+     * @throws IOException          If the socket fails while connecting
+     * @throws InterruptedException If we are unable to wait for the connection to finish
+     * @throws AdbAuthenticationFailedException If {@code throwOnUnauthorised} is {@code true}
+     * and the peer rejects the first authentication attempt, which indicates that the peer has
+     * not saved our public key from a previous connection
      */
-    public void connectIfAuthorised() throws IOException, InterruptedException, AdbAuthenticationFailedException {
-        connect(true);
-    }
-
-    private void connect(boolean throwOnUnauthorised) throws IOException, InterruptedException, AdbAuthenticationFailedException {
+    public void connect(boolean throwOnUnauthorised) throws IOException, InterruptedException, AdbAuthenticationFailedException {
         if (connected)
             throw new IllegalStateException("Already connected");
 
