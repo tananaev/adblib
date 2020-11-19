@@ -51,6 +51,16 @@ public class AdbConnection implements Closeable {
     private boolean connectAttempted;
 
     /**
+     * Whether the connection thread should give up if the first authentication attempt fails
+     */
+    private volatile boolean abortOnUnauthorised;
+
+    /**
+     * Whether the the first authentication attempt failed and {@link #abortOnUnauthorised} was {@code true}
+     */
+    private volatile boolean authorisationFailed;
+
+    /**
      * Specifies whether a CNXN packet has been received from the peer.
      */
     private boolean connected;
@@ -175,6 +185,12 @@ public class AdbConnection implements Closeable {
                                 if (msg.arg0 == AdbProtocol.AUTH_TYPE_TOKEN) {
                                     /* This is an authentication challenge */
                                     if (conn.sentSignature) {
+                                        if (abortOnUnauthorised) {
+                                            authorisationFailed = true;
+                                            /* Throwing an exception to break out of the loop */
+                                            throw new RuntimeException();
+                                        }
+
                                         /* We've already tried our signature, so send our public key */
                                         packet = AdbProtocol.generateAuth(AdbProtocol.AUTH_TYPE_RSA_PUBLIC,
                                                 conn.crypto.getAdbPublicKeyPayload());
@@ -242,7 +258,10 @@ public class AdbConnection implements Closeable {
                 wait();
 
             if (!connected) {
-                throw new IOException("Connection failed");
+                if (authorisationFailed)
+                    throw new AdbAuthenticationFailedException();
+                else
+                    throw new IOException("Connection failed");
             }
         }
 
@@ -257,6 +276,19 @@ public class AdbConnection implements Closeable {
      * @throws InterruptedException If we are unable to wait for the connection to finish
      */
     public void connect() throws IOException, InterruptedException {
+        connect(false);
+    }
+
+    /**
+     * Same as {@link #connect()}, but also throws {@link AdbAuthenticationFailedException} if the
+     * peer rejects the first authentication attempt, which indicates that the peer has not saved
+     * our public key from a previous connection
+     */
+    public void connectIfAuthorised() throws IOException, InterruptedException, AdbAuthenticationFailedException {
+        connect(true);
+    }
+
+    private void connect(boolean throwOnUnauthorised) throws IOException, InterruptedException, AdbAuthenticationFailedException {
         if (connected)
             throw new IllegalStateException("Already connected");
 
@@ -266,6 +298,8 @@ public class AdbConnection implements Closeable {
 
         /* Start the connection thread to respond to the peer */
         connectAttempted = true;
+        abortOnUnauthorised = throwOnUnauthorised;
+        authorisationFailed = false;
         connectionThread.start();
 
         /* Wait for the connection to go live */
@@ -274,7 +308,10 @@ public class AdbConnection implements Closeable {
                 wait();
 
             if (!connected) {
-                throw new IOException("Connection failed");
+                if (authorisationFailed)
+                    throw new AdbAuthenticationFailedException();
+                else
+                    throw new IOException("Connection failed");
             }
         }
     }
@@ -301,7 +338,10 @@ public class AdbConnection implements Closeable {
                 wait();
 
             if (!connected) {
-                throw new IOException("Connection failed");
+                if (authorisationFailed)
+                    throw new AdbAuthenticationFailedException();
+                else
+                    throw new IOException("Connection failed");
             }
         }
 
