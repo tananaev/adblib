@@ -286,11 +286,8 @@ public class AdbConnection implements Closeable {
         /* Wait for the connection to go live */
         synchronized (this) {
             long timeoutEndMillis = System.currentTimeMillis() + unit.toMillis(timeout);
-            long remainingTimeoutMillis = unit.toMillis(timeout);
-
-            while (!connected && connectAttempted && remainingTimeoutMillis > 0) {
-                wait(remainingTimeoutMillis);
-                remainingTimeoutMillis = timeoutEndMillis - System.currentTimeMillis();
+            while (!connected && connectAttempted && timeoutEndMillis - System.currentTimeMillis() > 0) {
+                wait(timeoutEndMillis - System.currentTimeMillis());
             }
 
             if (!connected)
