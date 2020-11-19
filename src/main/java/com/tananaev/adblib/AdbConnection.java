@@ -238,7 +238,7 @@ public class AdbConnection implements Closeable {
 
         synchronized (this) {
             /* Block if a connection is pending, but not yet complete */
-            if (!connected)
+            while (!connected && connectAttempted)
                 wait();
 
             if (!connected) {
@@ -270,7 +270,7 @@ public class AdbConnection implements Closeable {
 
         /* Wait for the connection to go live */
         synchronized (this) {
-            if (!connected)
+            while (!connected && connectAttempted)
                 wait();
 
             if (!connected) {
@@ -297,7 +297,7 @@ public class AdbConnection implements Closeable {
 
         /* Wait for the connect response */
         synchronized (this) {
-            if (!connected)
+            while (!connected && connectAttempted)
                 wait();
 
             if (!connected) {
