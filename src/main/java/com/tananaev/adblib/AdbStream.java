@@ -16,32 +16,32 @@ public class AdbStream implements Closeable {
     /**
      * The AdbConnection object that the stream communicates over
      */
-    private AdbConnection adbConn;
+    private final AdbConnection adbConn;
 
     /**
      * The local ID of the stream
      */
-    private int localId;
+    private final int localId;
 
     /**
      * The remote ID of the stream
      */
-    private int remoteId;
+    private volatile int remoteId;
 
     /**
      * Indicates whether a write is currently allowed
      */
-    private AtomicBoolean writeReady;
+    private final AtomicBoolean writeReady;
 
     /**
      * A queue of data from the target's write packets
      */
-    private Queue<byte[]> readQueue;
+    private final Queue<byte[]> readQueue;
 
     /**
      * Indicates whether the connection is closed already
      */
-    private boolean isClosed;
+    private volatile boolean isClosed;
 
     /**
      * Creates a new AdbStream object on the specified AdbConnection
@@ -79,8 +79,11 @@ public class AdbStream implements Closeable {
     void sendReady() throws IOException {
         /* Generate and send a READY packet */
         byte[] packet = AdbProtocol.generateReady(localId, remoteId);
-        adbConn.outputStream.write(packet);
-        adbConn.outputStream.flush();
+
+        synchronized (adbConn.outputStream) {
+            adbConn.outputStream.write(packet);
+            adbConn.outputStream.flush();
+        }
     }
 
     /**
@@ -184,10 +187,13 @@ public class AdbStream implements Closeable {
 
         /* Generate a WRITE packet and send it */
         byte[] packet = AdbProtocol.generateWrite(localId, remoteId, payload);
-        adbConn.outputStream.write(packet);
 
-        if (flush)
-            adbConn.outputStream.flush();
+        synchronized (adbConn.outputStream) {
+            adbConn.outputStream.write(packet);
+
+            if (flush)
+                adbConn.outputStream.flush();
+        }
     }
 
     /**
@@ -207,8 +213,11 @@ public class AdbStream implements Closeable {
         }
 
         byte[] packet = AdbProtocol.generateClose(localId, remoteId);
-        adbConn.outputStream.write(packet);
-        adbConn.outputStream.flush();
+
+        synchronized (adbConn.outputStream) {
+            adbConn.outputStream.write(packet);
+            adbConn.outputStream.flush();
+        }
     }
 
     /**

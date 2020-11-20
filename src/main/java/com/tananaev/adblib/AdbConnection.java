@@ -7,7 +7,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,23 +33,23 @@ public class AdbConnection implements Closeable {
      * The input stream that this class uses to read from
      * the socket.
      */
-    private InputStream inputStream;
+    private volatile InputStream inputStream;
 
     /**
      * The output stream that this class uses to read from
      * the socket.
      */
-    OutputStream outputStream;
+    volatile OutputStream outputStream;
 
     /**
      * The backend thread that handles responding to ADB packets.
      */
-    private Thread connectionThread;
+    private volatile Thread connectionThread;
 
     /**
      * Specifies whether a connect has been attempted
      */
-    private boolean connectAttempted;
+    private volatile boolean connectAttempted;
 
     /**
      * Whether the connection thread should give up if the first authentication attempt fails
@@ -64,18 +64,18 @@ public class AdbConnection implements Closeable {
     /**
      * Specifies whether a CNXN packet has been received from the peer.
      */
-    private boolean connected;
+    private volatile boolean connected;
 
     /**
      * Specifies the maximum amount data that can be sent to the remote peer.
      * This is only valid after connect() returns successfully.
      */
-    private int maxData;
+    private volatile int maxData;
 
     /**
      * An initialized ADB crypto object that contains a key pair.
      */
-    private com.tananaev.adblib.AdbCrypto crypto;
+    private volatile com.tananaev.adblib.AdbCrypto crypto;
 
     /**
      * Specifies whether this connection has already sent a signed token.
@@ -85,13 +85,13 @@ public class AdbConnection implements Closeable {
     /**
      * A hash map of our open streams indexed by local ID.
      **/
-    private HashMap<Integer, AdbStream> openStreams;
+    private volatile ConcurrentHashMap<Integer, AdbStream> openStreams;
 
     /**
      * Internal constructor to initialize some internal state
      */
     private AdbConnection() {
-        openStreams = new HashMap<Integer, AdbStream>();
+        openStreams = new ConcurrentHashMap<Integer, AdbStream>();
         lastLocalId = 0;
         connectionThread = createConnectionThread();
     }
@@ -203,8 +203,10 @@ public class AdbConnection implements Closeable {
                                     }
 
                                     /* Write the AUTH reply */
-                                    conn.outputStream.write(packet);
-                                    conn.outputStream.flush();
+                                    synchronized (conn.outputStream) {
+                                        conn.outputStream.write(packet);
+                                        conn.outputStream.flush();
+                                    }
                                 }
                                 break;
 
@@ -288,8 +290,10 @@ public class AdbConnection implements Closeable {
             throw new IllegalStateException("Already connected");
 
         /* Write the CONNECT packet */
-        outputStream.write(AdbProtocol.generateConnect());
-        outputStream.flush();
+        synchronized (outputStream) {
+            outputStream.write(AdbProtocol.generateConnect());
+            outputStream.flush();
+        }
 
         /* Start the connection thread to respond to the peer */
         connectAttempted = true;
@@ -323,8 +327,10 @@ public class AdbConnection implements Closeable {
         openStreams.put(localId, stream);
 
         /* Send the open */
-        outputStream.write(AdbProtocol.generateOpen(localId, destination));
-        outputStream.flush();
+        synchronized (outputStream) {
+            outputStream.write(AdbProtocol.generateOpen(localId, destination));
+            outputStream.flush();
+        }
 
         /* Wait for the connection thread to receive the OKAY */
         synchronized (stream) {
