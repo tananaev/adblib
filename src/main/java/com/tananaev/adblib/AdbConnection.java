@@ -253,26 +253,26 @@ public class AdbConnection implements Closeable {
         if (!connectAttempted)
             throw new IllegalStateException("connect() must be called first");
 
-        waitForConnection(0, TimeUnit.MILLISECONDS);
+        waitForConnection(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         return maxData;
     }
 
     /**
-     * Same as {@code connect(0, TimeUnit.MILLISECONDS, false)}
+     * Same as {@code connect(Long.MAX_VALUE, TimeUnit.MILLISECONDS, false)}
      *
      * @throws IOException          If the socket fails while connecting
      * @throws InterruptedException If we are unable to wait for the connection to finish
      */
     public void connect() throws IOException, InterruptedException {
-        connect(0, TimeUnit.MILLISECONDS, false);
+        connect(Long.MAX_VALUE, TimeUnit.MILLISECONDS, false);
     }
 
     /**
      * Connects to the remote device. This routine will block until the connection
      * completes or the timeout elapses.
      *
-     * @param timeout the time to wait for the lock, or {@code 0} to wait indefinitely
+     * @param timeout the time to wait for the lock
      * @param unit the time unit of the timeout argument
      * @param throwOnUnauthorised Whether to throw an {@link AdbAuthenticationFailedException}
      *                            if the peer rejects out first authentication attempt
@@ -316,7 +316,7 @@ public class AdbConnection implements Closeable {
         if (!connectAttempted)
             throw new IllegalStateException("connect() must be called first");
 
-        waitForConnection(0, TimeUnit.MILLISECONDS);
+        waitForConnection(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         /* Add this stream to this list of half-open streams */
         AdbStream stream = new AdbStream(this, localId);
@@ -342,8 +342,10 @@ public class AdbConnection implements Closeable {
     private boolean waitForConnection(long timeout, TimeUnit unit) throws InterruptedException, IOException {
         synchronized (this) {
             /* Block if a connection is pending, but not yet complete */
-            if (!connected)
-                wait(unit.toMillis(timeout));
+            long timeoutEndMillis = System.currentTimeMillis() + unit.toMillis(timeout);
+            while (!connected && connectAttempted && timeoutEndMillis - System.currentTimeMillis() > 0) {
+                wait(timeoutEndMillis - System.currentTimeMillis());
+            }
 
             if (!connected) {
                 if (connectAttempted)
