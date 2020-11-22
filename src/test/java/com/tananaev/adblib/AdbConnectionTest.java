@@ -1,11 +1,13 @@
 package com.tananaev.adblib;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class AdbConnectionTest {
 
@@ -41,6 +43,18 @@ public class AdbConnectionTest {
 
         AdbStream stream = connection.open("shell:");
 
+    }
+
+    @Test
+    public void deliversRemainingDataOnRemoteStreamClose() throws Exception {
+        connection.connect();
+
+        try (AdbStream stream = connection.open("shell:echo Hello world")) {
+            Thread.sleep(1000);
+            byte[] response = stream.read();
+            String responseText = new String(response, StandardCharsets.UTF_8);
+            Assert.assertEquals("Hello world", responseText.trim());
+        }
     }
 
 }
