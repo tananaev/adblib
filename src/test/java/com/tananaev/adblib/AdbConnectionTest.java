@@ -1,5 +1,7 @@
 package com.tananaev.adblib;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
@@ -7,10 +9,12 @@ import java.net.Socket;
 
 public class AdbConnectionTest {
 
-    //@Test
-    public void testConnection() throws Exception {
+    private Socket socket;
+    private AdbConnection connection;
 
-        Socket socket = new Socket("192.168.1.15", 5555);
+    @Before
+    public void beforeTest() throws Exception {
+        socket = new Socket("192.168.1.103", 5555);
 
         AdbCrypto crypto = AdbCrypto.generateAdbKeyPair(new AdbBase64() {
             @Override
@@ -19,11 +23,23 @@ public class AdbConnectionTest {
             }
         });
 
-        AdbConnection connection = AdbConnection.create(socket, crypto);
+        connection = AdbConnection.create(socket, crypto);
+    }
+
+    @After
+    public void afterTest() throws Exception {
+        connection.close();
+        connection = null;
+        socket.close();
+        socket = null;
+    }
+
+    @Test
+    public void testConnection() throws Exception {
 
         connection.connect();
 
-        AdbStream stream = connection.open("shell");
+        AdbStream stream = connection.open("shell:");
 
     }
 
