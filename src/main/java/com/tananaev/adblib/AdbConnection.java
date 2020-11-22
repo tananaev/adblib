@@ -173,7 +173,7 @@ public class AdbConnection implements Closeable {
                                         conn.openStreams.remove(msg.arg1);
 
                                         /* Notify readers and writers */
-                                        waitingStream.notifyClose();
+                                        waitingStream.notifyClose(false);
                                     }
                                 }
 
