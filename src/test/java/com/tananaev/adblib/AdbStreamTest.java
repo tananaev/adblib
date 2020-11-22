@@ -65,6 +65,10 @@ public class AdbStreamTest {
             byte[] response = stream.read();
             String responseText = new String(response, StandardCharsets.UTF_8);
             Assert.assertEquals("Hello world", responseText.trim());
+
+            // Waiting for close message to arrive
+            Thread.sleep(1000);
+
             Assert.assertTrue("Stream doesn't show as closed after the peer closed it and we emptied the read queue", stream.isClosed());
         }
     }
@@ -95,6 +99,14 @@ public class AdbStreamTest {
         }
 
         Assert.assertFalse("Received data after we closed the stream", receivedDataAfterClose);
+    }
+
+    @Test
+    public void showsAsClosedWhenClosedByPeerWhileEmpty() throws Exception {
+        AdbStream stream = connection.open("shell: Hello world");
+        stream.read(); // Emptying the stream
+        Thread.sleep(1000); // Allowing time for the peer to send the close message
+        Assert.assertTrue("Empty stream not showing as closed after close message received", stream.isClosed());
     }
 
 }
