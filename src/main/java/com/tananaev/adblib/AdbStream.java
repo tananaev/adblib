@@ -44,8 +44,7 @@ public class AdbStream implements Closeable {
     private volatile boolean isClosed;
 
     /**
-     * Indicates whether the remote peer has closed the stream
-     * and we are in the process of closing
+     * Whether the remote peer has closed but we still have unread data in the queue
      */
     private volatile boolean pendingClose;
 
