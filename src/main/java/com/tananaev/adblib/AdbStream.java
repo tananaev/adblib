@@ -44,10 +44,10 @@ public class AdbStream implements Closeable {
     private volatile boolean isClosed;
 
     /**
-     * Indicates whether the stream was closed by us calling {@link #close()}
-     * (as opposed to being closed by the remote peer)
+     * Indicates whether the remote peer has closed the stream
+     * and we are in the process of closing
      */
-    private volatile boolean closedByUs;
+    private volatile boolean pendingClose;
 
     /**
      * Creates a new AdbStream object on the specified AdbConnection
@@ -111,10 +111,14 @@ public class AdbStream implements Closeable {
     /**
      * Called by the connection thread to notify that the stream was closed by the peer.
      */
-    void notifyClose(boolean closedByUs) {
+    void notifyClose(boolean closedByPeer) {
         /* We don't call close() because it sends another CLOSE */
-        isClosed = true;
-        this.closedByUs = closedByUs;
+        if (closedByPeer) {
+            /* The remote peer closed the stream, but there might still be data in our queue */
+            pendingClose = true;
+        } else {
+            isClosed = true;
+        }
 
         /* Unwait readers and writers */
         synchronized (this) {
@@ -141,8 +145,13 @@ public class AdbStream implements Closeable {
                 readQueue.wait();
             }
 
-            if (closedByUs || data == null) {
+            if (isClosed) {
                 throw new IOException("Stream closed");
+            }
+
+            if (pendingClose && readQueue.isEmpty()) {
+                /* The peer closed the stream, and we've finished reading the stream data, so this stream is finished */
+                isClosed = true;
             }
         }
 
@@ -216,7 +225,7 @@ public class AdbStream implements Closeable {
                 return;
 
             /* Notify readers/writers that we've closed */
-            notifyClose(true);
+            notifyClose(false);
         }
 
         byte[] packet = AdbProtocol.generateClose(localId, remoteId);
