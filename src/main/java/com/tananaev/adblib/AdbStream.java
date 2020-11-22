@@ -44,6 +44,11 @@ public class AdbStream implements Closeable {
     private volatile boolean isClosed;
 
     /**
+     * Whether the remote peer has closed but we still have unread data in the queue
+     */
+    private volatile boolean pendingClose;
+
+    /**
      * Creates a new AdbStream object on the specified AdbConnection
      * with the given local ID.
      *
@@ -105,9 +110,14 @@ public class AdbStream implements Closeable {
     /**
      * Called by the connection thread to notify that the stream was closed by the peer.
      */
-    void notifyClose() {
+    void notifyClose(boolean closedByPeer) {
         /* We don't call close() because it sends another CLOSE */
-        isClosed = true;
+        if (closedByPeer && !readQueue.isEmpty()) {
+            /* The remote peer closed the stream but we haven't finished reading the remaining data */
+            pendingClose = true;
+        } else {
+            isClosed = true;
+        }
 
         /* Unwait readers and writers */
         synchronized (this) {
@@ -130,12 +140,17 @@ public class AdbStream implements Closeable {
 
         synchronized (readQueue) {
             /* Wait for the connection to close or data to be received */
-            while (!isClosed && (data = readQueue.poll()) == null) {
+            while ((data = readQueue.poll()) == null && !isClosed) {
                 readQueue.wait();
             }
 
             if (isClosed) {
                 throw new IOException("Stream closed");
+            }
+
+            if (pendingClose && readQueue.isEmpty()) {
+                /* The peer closed the stream, and we've finished reading the stream data, so this stream is finished */
+                isClosed = true;
             }
         }
 
@@ -209,7 +224,7 @@ public class AdbStream implements Closeable {
                 return;
 
             /* Notify readers/writers that we've closed */
-            notifyClose();
+            notifyClose(false);
         }
 
         byte[] packet = AdbProtocol.generateClose(localId, remoteId);
