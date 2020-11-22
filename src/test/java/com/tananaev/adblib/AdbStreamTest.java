@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
+@Ignore
 public class AdbStreamTest {
 
     private static AdbCrypto crypto;
