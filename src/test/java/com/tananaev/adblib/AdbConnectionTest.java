@@ -55,6 +55,7 @@ public class AdbConnectionTest {
 
         try (AdbStream stream = connection.open("shell:echo Hello world")) {
             Thread.sleep(1000);
+            Assert.assertFalse("Stream showed as closed before we read the data", stream.isClosed());
             byte[] response = stream.read();
             String responseText = new String(response, StandardCharsets.UTF_8);
             Assert.assertEquals("Hello world", responseText.trim());
@@ -63,44 +64,22 @@ public class AdbConnectionTest {
 
     @Test
     public void doesntDeliverRemainingDataOnLocalStreamClose() throws Exception {
-        final AtomicBoolean receivedDataAfterClose = new AtomicBoolean(false);
-        final CountDownLatch streamClosed = new CountDownLatch(1);
-
         connection.connect();
 
-        final AdbStream stream = connection.open("shell:");
-
-        Thread readThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    streamClosed.await(5, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Timed out waiting for stream to close");
-                }
-
-                try {
-                    stream.read();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Unexpectedly interrupted in read thread");
-                } catch (IOException ignored) {
-                    return; // Stream closed, so we finished without receiving the data
-                }
-
-                receivedDataAfterClose.set(true);
-            }
-        });
-        readThread.start();
-
+        AdbStream stream = connection.open("shell:"); // Starting empty shell so it won't self-close
         stream.write("echo Hello world");
         Thread.sleep(1000); // Giving the peer time to run the command and send the output back
         stream.close();
-        streamClosed.countDown();
 
-        readThread.join(1000);
+        boolean receivedDataAfterClose;
+        try {
+            stream.read();
+            receivedDataAfterClose = true;
+        } catch (IOException ignored) {
+            receivedDataAfterClose = false;
+        }
 
-        Assert.assertFalse("Read thread did not finish after we closed the stream", readThread.isAlive());
-        Assert.assertFalse("Received more data after we closed the stream", receivedDataAfterClose.get());
+        Assert.assertFalse("Received data after we closed the stream", receivedDataAfterClose);
     }
 
 }
